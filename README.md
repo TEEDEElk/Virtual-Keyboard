@@ -43,10 +43,3 @@ This project uses **computer vision** and **hand tracking** to detect fingertip 
 Special thanks to **Muhammad Usama** for mentorship and guidance throughout this project.  
 
 ---
-
-## 📌 Getting Started  
-
-### Prerequisites  
-Make sure you have Python installed and the following libraries:  
-```bash
-pip install opencv-python mediapipe numpy
