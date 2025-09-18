@@ -31,7 +31,15 @@ class Language(Enum):
 class GestureKeyboard:
     def __init__(self):
         # Initialize camera
-        self.cap = cv2.VideoCapture(0)
+        try:
+            self.cap = cv2.VideoCapture(0)
+            if not self.cap.isOpened():
+                raise RuntimeError("Cannot access camera")
+        except Exception as e:
+            print(f"Camera initialization error: {e}")
+            print("Please ensure your camera is connected and not in use by another application.")
+            raise
+            
         self.screen_width, self.screen_height = pyautogui.size()
         
         # Initialize MediaPipe Hands
@@ -74,7 +82,11 @@ class GestureKeyboard:
         }
         
         # Initialize text-to-speech
-        mixer.init()
+        try:
+            mixer.init()
+        except Exception as e:
+            print(f"Audio initialization error: {e}")
+            self.voice_feedback = False
         
         # Load custom gesture model if available
         self.custom_gesture_model = None
@@ -130,14 +142,19 @@ class GestureKeyboard:
             return
             
         try:
-            tts = gTTS(text=text, lang=self.current_language.value)
-            with tempfile.NamedTemporaryFile(delete=True, suffix='.mp3') as tmp_file:
-                tts.save(tmp_file.name)
-                mixer.music.load(tmp_file.name)
-                mixer.music.play()
-                # Wait for playback to finish
-                while mixer.music.get_busy():
-                    time.sleep(0.1)
+            # Fallback to offline TTS if gTTS fails
+            try:
+                tts = gTTS(text=text, lang=self.current_language.value)
+                with tempfile.NamedTemporaryFile(delete=True, suffix='.mp3') as tmp_file:
+                    tts.save(tmp_file.name)
+                    mixer.music.load(tmp_file.name)
+                    mixer.music.play()
+                    # Wait for playback to finish
+                    while mixer.music.get_busy():
+                        time.sleep(0.1)
+            except Exception:
+                # Fallback: print to console if TTS fails
+                print(f"Voice: {text}")
         except Exception as e:
             print(f"Text-to-speech error: {e}")
     
@@ -286,11 +303,16 @@ class GestureKeyboard:
         if not self.text_buffer:
             return
             
-        search_url = self.platform_urls[self.current_platform] + self.text_buffer.replace(' ', '+')
-        webbrowser.open(search_url)
-        
-        if self.voice_feedback:
-            self.speak_text(f"Searching {self.current_platform.name} for {self.text_buffer}")
+        try:
+            search_url = self.platform_urls[self.current_platform] + self.text_buffer.replace(' ', '+')
+            webbrowser.open(search_url)
+            
+            if self.voice_feedback:
+                self.speak_text(f"Searching {self.current_platform.name} for {self.text_buffer}")
+        except Exception as e:
+            print(f"Search error: {e}")
+            if self.voice_feedback:
+                self.speak_text("Search failed")
             
         self.text_buffer = ""
         self.keyboard_visible = False
